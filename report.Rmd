@@ -1,0 +1,44 @@
+# Reproducible Research: Peer Assessment 1
+
+
+## Loading and preprocessing the data
+```{r echo=TRUE}
+data <- read.csv('activity.csv')
+```
+
+## What is mean total number of steps taken per day?
+Group steps by date for which they were recorded:
+```{r echo=TRUE}
+per_day <- aggregate(steps ~ date, data, sum)
+barplot(per_day$steps, main="Number of steps per day", names.arg=per_day$date)
+```
+
+In order to understand total number of steps a little bit more one could 
+calculate the mean and median of the series:
+```{r echo=TRUE}
+mean_steps <- mean(per_day$steps)
+median_steps <- median(per_day$steps)
+```
+Giving the following results:
+- **Mean**: {r mean_steps}
+- **Median**: {r median_steps} 
+
+## What is the average daily activity pattern?
+
+```{r echo=TRUE}
+per_interval <- aggregate(steps ~ interval, data, mean)
+x <- per_interval$interval
+y <- per_interval$steps
+plot(x, y, type="l")
+```
+
+One can clearly spot the maximum that appears at:
+```{r echo=TRUE}
+subset(per_interval, steps==max(y))$interval
+```
+
+## Imputing missing values
+
+
+
+## Are there differences in activity patterns between weekdays and weekends?
