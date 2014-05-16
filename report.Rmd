@@ -12,20 +12,27 @@ data <- read.csv('activity.csv')
 
 ## What is mean total number of steps taken per day?
 
-**TODO: SHOULD BELOW BE BAR OR RATHER HISTOGRAM???** 
 Group steps by date for which they were recorded:
 ```{r}
 per_day <- aggregate(steps ~ date, data, sum)
-#barplot
-hist(
+barplot(
     per_day$steps, 
     main="Number of steps per day", 
     xlab="Day",
     ylab="Total Steps Per Day",
-    #names.arg=per_day$date,
+    names.arg=per_day$date,
     col="blue",
-    breaks=20
 )
+```
+
+To gain some extra perspective into the way one should understand the above we 
+can take a look at the histogram of steps:
+```{r}
+hist(
+    subset(data, steps > 0)$steps, 
+    breaks=25, 
+    xlab='Number of Steps', 
+    main="Distribution of Number of Steps")
 ```
 
 In order to understand total number of steps a little bit more one could 
@@ -40,6 +47,7 @@ Giving the following results:
 
 ## What is the average daily activity pattern?
 
+Let's look at the line plot showing daily activity across all dates:
 ```{r}
 per_interval <- aggregate(steps ~ interval, data, mean)
 x <- per_interval$interval
@@ -53,13 +61,79 @@ plot(
     main="Averaged Number of Steps per Interval")
 ```
 
-One can clearly spot the maximum that appears at:
+it's clearly visible that the maximum appears at:
 ```{r}
 subset(per_interval, steps==max(y))$interval
 ```
 
 ## Imputing missing values
+```{r}
+number_of_nas <- sum(is.na(data$steps))
+```
+Total number of NAs is `r number_of_nas`.
 
+In will remove NAs that appear in the **steps** column by replacing them with the
+mean number of steps for a date.
+```{r}
+library(zoo)
+
+new_data <- data
+new_data$steps <- na.aggregate(data$steps, by='date', FUN=mean)
+```
+
+Let's see whether our strategy for filling up the NAs has any serious impact on the
+data. First let's have a look at the distribution of total number of steps for each day
+```{r}
+new_per_day <- aggregate(steps ~ date, new_data, sum)
+barplot(
+    new_per_day$steps, 
+    main="Number of steps per day", 
+    xlab="Day",
+    ylab="Total Steps Per Day",
+    names.arg=new_per_day$date,
+    col="blue",
+)
+```
+
+Also as before let's calculate mean and median for the new data set:
+```{r}
+new_mean_steps <- mean(new_per_day$steps)
+new_median_steps <- median(new_per_day$steps)
+```
+
+Giving the following results:
+- **Mean**: `r new_mean_steps`
+- **Median**: `r new_median_steps`
+
+One can clearly see that the difference is minimal:
+- **Mean Diff**: `r new_mean_steps - mean_steps`
+- **Median Diff**: `r new_median_steps - median_steps`
 
 
 ## Are there differences in activity patterns between weekdays and weekends?
+
+Before answering the question of whether there's any difference bettwen weekend
+and weekday behaviour one needs to create new factor variable:
+```{r}
+new_data$day_type <- weekdays(as.POSIXlt(new_data$date, format="%Y-%m-%d"))
+weekend <- c("Saturday", "Sunday")
+weekdays <- c("Monday", "Tuesday", "Wednesday", "Thursday", "Friday")
+new_data[new_data$day_type %in% weekend,]$day_type <- "weekend"
+new_data[new_data$day_type %in% weekdays,]$day_type <- "weekday"
+new_data$day_type <- factor(new_data$day_type)
+```
+
+Finally let's have a look at the difference between weekend and weekday behaviour:
+```{r}
+library(lattice)
+new_per_interval_weekend <- aggregate(
+    steps ~ interval, subset(new_data, day_type == 'weekend'), mean)
+new_per_interval_weekend$day_type <- 'weekend'
+
+new_per_interval_weekday <- aggregate(
+    steps ~ interval, subset(new_data, day_type == 'weekday'), mean)
+new_per_interval_weekday$day_type <- 'weekday'
+
+day_type_data <- rbind(new_per_interval_weekend, new_per_interval_weekday)
+xyplot(steps ~ interval | day_type, data=day_type_data, layout = c(1, 2), type="l")
+```
